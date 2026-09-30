@@ -55,8 +55,8 @@ defmodule ArcGIS.Feature do
 
   def from_map(data, _metadata), do: data
 
-  @spec query(Service.t(), layer_id :: non_neg_integer(), [ArGIS.Portal.request_option()]) ::
-          Portal.ResultSet.t()
+  @spec query(Service.t(), layer_id :: non_neg_integer(), [ArcGIS.Portal.request_option()]) ::
+          {:ok, Portal.ResultSet.t()} | {:error, term()}
   @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ [])
       when is_number(layer_id) and layer_id >= 0 do
@@ -73,7 +73,7 @@ defmodule ArcGIS.Feature do
           Service.t(),
           mutations :: mutations_by_layer_id,
           options :: [Portal.request_option() | mutate_option]
-        ) :: boolean
+        ) :: {:ok, map()} | {:error, term()}
   @doc "Add, update, and/or delete features from one or more layers. Defaults to rolling back on failure."
   def mutate(service, mutations, options \\ []) do
     service = Service.with_schema(service, options)

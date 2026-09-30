@@ -35,7 +35,7 @@ defmodule ArcGIS.Feature.Service do
   @type t() :: %__MODULE__{
           portal: Portal.t(),
           id: String.t(),
-          schema: nil | ArcGIS.Schema.t()
+          schema: nil | ArcGIS.Feature.Schema.t()
         }
 
   @spec create(Portal.t(), CreateParameters.t(), options :: Portal.portal_options()) ::
