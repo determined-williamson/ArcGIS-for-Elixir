@@ -110,8 +110,43 @@ defmodule ArcGIS.Feature do
     # TODO: support PBF formats
     document = [edits: document]
 
-    Service.post(service, "/applyEdits", document, options_with_params)
+    service
+    |> Service.post("/applyEdits", document, options_with_params)
+    |> validate_mutation_result()
   end
+
+  defp validate_mutation_result({:ok, result}) do
+    case mutation_failures(result) do
+      [] -> {:ok, result}
+      failures -> {:error, {:mutation_failed, failures}}
+    end
+  end
+
+  defp validate_mutation_result({:error, _} = error), do: error
+
+  defp mutation_failures(results) when is_list(results) do
+    Enum.flat_map(results, &mutation_failures/1)
+  end
+
+  defp mutation_failures(result) when is_map(result) do
+    [
+      {"addResults", :addResults},
+      {"updateResults", :updateResults},
+      {"deleteResults", :deleteResults}
+    ]
+    |> Enum.flat_map(fn {string_key, atom_key} ->
+      result
+      |> Map.get(string_key, Map.get(result, atom_key, []))
+      |> List.wrap()
+      |> Enum.filter(&mutation_failure?/1)
+    end)
+  end
+
+  defp mutation_failures(_result), do: []
+
+  defp mutation_failure?(%{"success" => false}), do: true
+  defp mutation_failure?(%{success: false}), do: true
+  defp mutation_failure?(_result), do: false
 
   @spec sanitize(features :: [t()], layer_id :: non_neg_integer, service :: Service.t()) :: [t()]
   @doc "Conforms a list of features to ArcGIS requirements, making them appropriate for e.g. use in mutations"

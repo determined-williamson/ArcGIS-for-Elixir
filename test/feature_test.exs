@@ -45,4 +45,44 @@ defmodule ArcGIS.Test.Feature do
     assert {:ok, _features} =
              ArcGIS.Feature.query(ArcGIS.Test.Fixtures.feature_service(), layer_id, query)
   end
+
+  test "mutate/3 returns ok when applyEdits rows succeed" do
+    result = [%{"id" => 0, "addResults" => [%{"success" => true, "objectId" => 1}]}]
+    stub_apply_edits(result)
+
+    assert {:ok, ^result} =
+             ArcGIS.Feature.mutate(
+               ArcGIS.Test.Fixtures.feature_service(),
+               %{0 => %{create: [%{attributes: %{"Name" => "Downtown"}}]}}
+             )
+  end
+
+  test "mutate/3 returns an error when applyEdits rows fail" do
+    failures = [%{"success" => false, "error" => %{"code" => 1000}}]
+    stub_apply_edits([%{"id" => 0, "addResults" => failures}])
+
+    assert {:error, {:mutation_failed, ^failures}} =
+             ArcGIS.Feature.mutate(
+               ArcGIS.Test.Fixtures.feature_service(),
+               %{0 => %{create: [%{attributes: %{"Name" => "Downtown"}}]}}
+             )
+  end
+
+  defp stub_apply_edits(result) do
+    Req.Test.stub(ArcGIS, fn conn ->
+      case ArcGIS.Test.Fixtures.Network.common_response(conn) do
+        {:ok, response} ->
+          response
+
+        {_, %{request_path: path} = conn} ->
+          cond do
+            String.ends_with?(path, "/layers") ->
+              Req.Test.json(conn, %{"error" => %{"message" => "schema unavailable"}})
+
+            String.ends_with?(path, "/applyEdits") ->
+              Req.Test.json(conn, result)
+          end
+      end
+    end)
+  end
 end
